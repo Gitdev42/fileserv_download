@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os, requests
+import urllib.parse
 try: 
     from BeautifulSoup import BeautifulSoup
 except ImportError:
@@ -11,13 +12,19 @@ rootUrl = 'http://tuhh.fileserv.eu/thanks/'
 cookie = 'd8e0b842ea18876511e49e4ac8ae74b8'
 
 
+def toText(text):
+	# remove url encoding
+	return urllib.parse.unquote(text)
+	
+
 def getFile(session, path, url):
+	# download file with a given url to a given path
 	try:
 		r = session.get(rootUrl + url)
-		filename = path + url
+		filename = path + toText(url)
 		open(filename, 'wb').write(r.content)
 	except IOError:
-		print('Error: Could not write file ' + filename)
+		print('Error: Could not write file.')
 	except:
 		print('Error: Could not access server. Please create a new cookie.')
 
@@ -28,7 +35,7 @@ def downloadFiles(session, path, url):
 	soup = BeautifulSoup(r.text, "html.parser")
 
 	# create directory
-	dirname = path + url[5:]
+	dirname = path + toText(url[5:])
 	if not os.path.exists(dirname):
 		try:
 			os.makedirs(dirname)
@@ -41,9 +48,8 @@ def downloadFiles(session, path, url):
 		getFile(session, path, link.get('href'))
 	
 	# search through subdirectories recursively
-	for l in soup.find_all('a', {"class" : "item dir"}):
-		link = l.get('href')
-		downloadFiles(session, path, link)
+	for link in soup.find_all('a', {"class" : "item dir"}):
+		downloadFiles(session, path, link.get('href'))
 
 
 def main():
