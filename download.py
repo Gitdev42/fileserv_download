@@ -63,7 +63,6 @@ def main():
 	
 	# download all files
 	downloadFiles(session, filepath, "")
-	print(r.text)
 
 
 main()
