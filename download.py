@@ -11,12 +11,8 @@ except ImportError:
 # general settings
 rootUrl = 'http://tuhh.fileserv.eu/thanks/'
 filepath = "files/"
-
-# to create a new cookie id, login to the site and copy
-# the value of the cookie with the name 'fileserv2012'
-# (can be found with Shift+F9 in Firefox)
-cookie = 'd8e0b842ea18876511e49e4ac8ae74b8'
-
+username = 'student'
+password = 'tuhh'
 
 
 # remove url encoding
@@ -32,46 +28,42 @@ def getFile(session, path, url):
 		open(filename, 'wb').write(r.content)
 	except IOError:
 		print('Error: Could not write file.')
-	except:
-		print('Server Error: Please create a new cookie id.')
 
 
 # download all files
 def downloadFiles(session, path, url):
-	try:
-		# parse html
-		r = session.get(rootUrl + url)
-		soup = BeautifulSoup(r.text, "html.parser")
+	# parse html
+	r = session.get(rootUrl + url)
+	soup = BeautifulSoup(r.text, "html.parser")
 
-		# create directory
-		dirname = path + toText(url[5:])
-		if not os.path.exists(dirname):
-			try:
-				os.makedirs(dirname)
-			except OSError as exc:
-				if exc.errno != errno.EEXIST:
-					raise
-		
-		# download files in current directory
-		for link in soup.find_all('a', {"class":"item file"}):
-			getFile(session, path, link.get('href'))
-		
-		# search through subdirectories recursively
-		for link in soup.find_all('a', {"class" : "item dir"}):
-			downloadFiles(session, path, link.get('href'))
-	except:
-		print('Server Error: Please create a new cookie id.')
+	# create directory
+	dirname = path + toText(url[5:])
+	if not os.path.exists(dirname):
+		try:
+			os.makedirs(dirname)
+		except OSError as exc:
+			if exc.errno != errno.EEXIST:
+				raise
+	
+	# download files in current directory
+	for link in soup.find_all('a', {"class":"item file"}):
+		getFile(session, path, link.get('href'))
+	
+	# search through subdirectories recursively
+	for link in soup.find_all('a', {"class" : "item dir"}):
+		downloadFiles(session, path, link.get('href'))
 
 
 # main function
 def main():
 	# prepare session with authentication cookie
-	cookiejar = requests.cookies.cookiejar_from_dict({'fileserv2012' : cookie})
+	loginData = {'user_name' : username, 'user_pass' : password}
 	session = requests.Session()
-	session.cookies = cookiejar
+	session.post(rootUrl, loginData)
 	
 	# download all files
 	downloadFiles(session, filepath, "")
+	print(r.text)
 
 
 main()
