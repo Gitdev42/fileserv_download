@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import requests
 import urllib.parse
@@ -8,39 +10,40 @@ except ImportError:
 
 
 # general settings
-rootUrl = 'http://tuhh.fileserv.eu/thanks/'
+root_url = 'http://tuhh.fileserv.eu/thanks/'
 filepath = "files/"
 username = 'student'
 password = 'tuhh'
 
+# replace spaces with specified char, set to None to keep spaces
+space_replacement = '-'
+
 
 # remove url encoding
-def toText(url):
+def to_text(url):
 	return urllib.parse.unquote(url)
 
-# file the name of the file
-def fixFileName(s):
-	s = str.replace(s, "<", "-")
-	s = str.replace(s, ">", "-")
-	s = str.replace(s, "*", "-")
-	s = str.replace(s, "|", "-")
-	s = str.replace(s, "\\", "-")
-	s = str.replace(s, "\"", "-")
-	s = str.replace(s, "?", "-")
-	s = str.replace(s, ":", "-")
 
+# sanitize the file name input
+def fix_filename(s):
+	forbidden_chars = '<>:"\\|?*'
+	for c in forbidden_chars:
+		s = str.replace(s, c, '-')
+	if space_replacement is not None:
+		s = str.replace(s, ' ', space_replacement)
 	return s
 
+
 # download file with a given url to a given path
-def getFile(session, path, url):
+def get_file(session, path, url):
 	try:
-		filename = path + fixFileName(toText(url))
+		filename = path + fix_filename(to_text(url))
 
 		if os.path.isfile(filename):
 			print('File "', filename, '" already exist in current directory. Skipping.')
 			return
 
-		r = session.get(rootUrl + url)
+		r = session.get(root_url + url)
 		print('Downloading "', filename, '".')
 		open(filename, 'wb').write(r.content)
 
@@ -49,13 +52,12 @@ def getFile(session, path, url):
 
 
 # download all files
-def downloadFiles(session, path, url):
-	r = session.get(rootUrl + url)
+def download_files(session, path, url):
+	r = session.get(root_url + url)
 	soup = BeautifulSoup(r.text, "html.parser")
 
 	# create directory
-	dirname = path + toText(url[5:])
-	dirname = fixFileName(dirname)
+	dirname = fix_filename(path + to_text(url[5:]))
 	print('Creating directory named "', dirname, '".')
 
 	if not os.path.exists(dirname):
@@ -68,21 +70,22 @@ def downloadFiles(session, path, url):
 	# download files in current directory
 	for link in soup.find_all('a', {"class":"item file"}):
 		print('Found link containing file. Attempting download...')
-		getFile(session, path, link.get('href'))
+		get_file(session, path, link.get('href'))
 
 	# search through subdirectories recursively
 	for link in soup.find_all('a', {"class" : "item dir"}):
-		downloadFiles(session, path, link.get('href'))
+		download_files(session, path, link.get('href'))
 
 
 def main():
 	print('Preparing session with authentication cookie.')
-	loginData = {'user_name' : username, 'user_pass' : password}
+	login_data = {'user_name' : username, 'user_pass' : password}
 	session = requests.Session()
-	session.post(rootUrl, loginData)
+	session.post(root_url, login_data)
 
 	print('Downloading files...')
-	downloadFiles(session, filepath, "")
+	download_files(session, filepath, "")
 	print('Done!')
+
 
 main()
